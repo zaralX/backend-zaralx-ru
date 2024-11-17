@@ -66,8 +66,8 @@ module.exports = async function (fastify, opts) {
         }
 
         const tokens = {
-            access_token: fastify.jwt.sign({ id: user.id }, { expiresIn: '15m' }),
-            refresh_token: fastify.jwt.sign({ id: user.id }, { expiresIn: '30d' })
+            access_token: fastify.jwt.sign({ id: user.id, discordId: user.discordId, telegramId: user.telegramId }, { expiresIn: '15m' }),
+            refresh_token: fastify.jwt.sign({ id: user.id, discordId: user.discordId, telegramId: user.telegramId }, { expiresIn: '30d' })
         };
 
         reply.setCookie("access_token", tokens.access_token, {

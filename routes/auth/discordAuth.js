@@ -4,6 +4,16 @@ const DiscordOauth2 = require("discord-oauth2");
 
 module.exports = async function (fastify, opts) {
   fastify.post('/discord/login', async function (request, reply) {
+    const User = fastify.sequelize.model('User');
+    try {
+      const accessToken = request.cookies.access_token
+      if (!accessToken) {
+        return;
+      }
+
+      const userJwtData = fastify.jwt.verify(accessToken)
+      request.user = await User.findOne({where: {id: userJwtData.id}})
+    } catch (err) {}
     const { code } = request.body;
 
     if (!code) {
@@ -32,17 +42,12 @@ module.exports = async function (fastify, opts) {
         return reply.status(400).send({ message: 'Email в Discord не подтвержден' });
       }
 
-      const User = fastify.sequelize.model('User');
-
       // Поиск пользователя по Discord ID
       let user = await User.findOne({ where: { discordId: discordUserData.id } });
 
       if (!user) {
         // Ищем аккаунт для привязки
-        user = await User.findOne({ where: { email: discordUserData.email } });
-        if (!user) {
-          user = await User.findOne({ where: { telegramId: request?.body?.user?.telegramId ?? -1 } });
-        }
+        user = await User.findOne({ where: { id: request.user.id } });
 
         if (user) {
           // Привязываем Discord ID к существующему аккаунту Telegram
@@ -52,6 +57,9 @@ module.exports = async function (fastify, opts) {
           }
           await user.save();
         } else {
+          if (request.user) {
+            return reply.status(400).send({ message: 'Не получилось привязать аккаунт к существующему' });
+          }
           // Создаем нового пользователя
           user = await User.create({
             discordId: discordUserData.id,
@@ -63,8 +71,8 @@ module.exports = async function (fastify, opts) {
 
       // Генерация токенов
       const tokens = {
-        access_token: fastify.jwt.sign({ id: user.id }, { expiresIn: '15m' }),
-        refresh_token: fastify.jwt.sign({ id: user.id }, { expiresIn: '30d' }),
+        access_token: fastify.jwt.sign({ id: user.id, discordId: user.discordId, telegramId: user.telegramId }, { expiresIn: '15m' }),
+        refresh_token: fastify.jwt.sign({ id: user.id, discordId: user.discordId, telegramId: user.telegramId }, { expiresIn: '30d' }),
       };
 
       // Установка куков
