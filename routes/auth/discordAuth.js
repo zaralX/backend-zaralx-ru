@@ -24,6 +24,14 @@ module.exports = async function (fastify, opts) {
 
     try {
       // Получение токена Discord
+      console.log({
+        clientId: process.env.DISCORD_ID,
+        clientSecret: process.env.DISCORD_SECRET,
+        code,
+        scope: "identify email",
+        grantType: "authorization_code",
+        redirectUri: process.env.DISCORD_REDIRECT,
+      })
       const discordTokens = await oauth.tokenRequest({
         clientId: process.env.DISCORD_ID,
         clientSecret: process.env.DISCORD_SECRET,
@@ -97,6 +105,7 @@ module.exports = async function (fastify, opts) {
         message: "Успешный вход через Discord!",
       });
     } catch (error) {
+      console.error("Discord OAuth Error:", error.response?.data || error.message);
       fastify.log.error(error);
       return reply.status(500).send({ message: 'Ошибка авторизации через Discord', error });
     }
