@@ -47,7 +47,7 @@ module.exports = async function (fastify, opts) {
 
       if (!user) {
         // Ищем аккаунт для привязки
-        user = await User.findOne({ where: { id: request.user.id } });
+        user = await User.findOne({ where: { id: request?.user?.id ?? -1 } });
 
         if (user) {
           // Привязываем Discord ID к существующему аккаунту Telegram
@@ -99,7 +99,7 @@ module.exports = async function (fastify, opts) {
     } catch (error) {
       console.error("Discord OAuth Error:", error.response?.data || error.message);
       fastify.log.error(error);
-      return reply.status(500).send({ message: 'Ошибка авторизации через Discord', error });
+      return reply.status(500).send({ message: 'Ошибка авторизации через Discord' });
     }
   });
 };
