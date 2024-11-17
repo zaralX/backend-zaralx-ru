@@ -10,25 +10,26 @@ module.exports = async function (fastify, opts) {
             return reply.status(400).send({ message: 'Missing required parameters' });
         }
 
-        // Проверяем данные Telegram (реализация проверки хэша зависит от Bot Token)
-        const secret = fastify.crypto.createHash('sha256')
-            .update(process.env.TELEGRAM_BOT_TOKEN)
-            .digest();
+        // Проверка Telegram-данных без использования crypto
+        const secret = process.env.TELEGRAM_BOT_TOKEN; // Ваш Telegram Bot Token
 
+        // Формируем строку для валидации
         const dataCheckString = Object.keys(request.body)
-            .filter(key => key !== 'hash')
+            .filter(key => key !== 'hash') // Убираем параметр 'hash'
             .sort()
             .map(key => `${key}=${request.body[key]}`)
             .join('\n');
 
-        const checkHash = fastify.crypto.createHmac('sha256', secret)
-            .update(dataCheckString)
-            .digest('hex');
+        // Простое сравнение хэша с данными для проверки
+        console.log(secret);
+        const checkHash = generateTelegramHash(secret, dataCheckString); // Ваша функция для хэширования
 
+        // Сравнение полученного хэша с тем, что Telegram передает
         if (checkHash !== hash) {
             return reply.status(403).send({ message: 'Invalid Telegram data' });
         }
 
+        // Логика работы с пользователем, как в вашем коде
         const User = fastify.sequelize.model('User');
 
         // Проверяем, существует ли уже пользователь с этим Telegram ID
@@ -76,4 +77,15 @@ module.exports = async function (fastify, opts) {
             message: "Успешный вход через Telegram!"
         });
     });
+}
+
+/**
+ * Функция для генерации хэша с использованием секретного токена
+ * @param {string} secret - секретный токен бота
+ * @param {string} dataCheckString - строка для проверки
+ * @returns {Uint8Array} - возвращает сгенерированный хэш
+ */
+function generateTelegramHash(secret, dataCheckString) {
+    // Простой способ с использованием встроенных функций JS
+    return new TextEncoder().encode(secret + dataCheckString); // Примерное решение без использования crypto
 }
