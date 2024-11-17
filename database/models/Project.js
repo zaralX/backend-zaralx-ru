@@ -3,27 +3,29 @@ const { DataTypes, QueryTypes} = require('sequelize');
 module.exports = async function (fastify, options) {
     const sequelize = fastify.sequelize;
 
-    return sequelize.define('User', {
+    return sequelize.define('Project', {
         id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true
         },
-        discordId: {
-            type: DataTypes.BIGINT,
-            allowNull: false,
-            unique: true
+        name: {
+            type: DataTypes.STRING,
         },
-        email: {
+        description: {
+            type: DataTypes.TEXT,
+            allowNull: false
+        },
+        type: {
             type: DataTypes.STRING,
             allowNull: false
         },
-        password: {
+        image: {
             type: DataTypes.TEXT,
-            allowNull: true
+            allowNull: false
         },
     }, {
-        tableName: 'users',
+        tableName: 'projects',
         timestamps: true
     });
 }
