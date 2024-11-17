@@ -21,4 +21,16 @@ module.exports = async function (fastify, opts) {
             return reply.status(401).send({error: 'Invalid refresh token'})
         }
     })
+
+    fastify.post('/logout', async function (request, reply) {
+        reply.clearCookie("access_token", {
+            path: '/'
+        })
+
+        reply.clearCookie("refresh_token", {
+            path: '/'
+        })
+
+        return reply.status(200).send();
+    })
 }

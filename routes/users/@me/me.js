@@ -14,18 +14,6 @@ module.exports = async function (fastify, opts) {
         }
     })
 
-    fastify.post('/logout', async function (request, reply) {
-        reply.clearCookie("access_token", {
-            path: '/'
-        })
-
-        reply.clearCookie("refresh_token", {
-            path: '/'
-        })
-
-        return reply.status(200).send();
-    })
-
     fastify.post('/delete', async function (request, reply) {
         const User = fastify.sequelize.model('User');
         await User.destroy({
