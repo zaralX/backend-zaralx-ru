@@ -1,7 +1,7 @@
 async function setupDatabase(fastify) {
     const UserModel = await require('./models/User')(fastify);
 
-    fastify.sequelize.sync({force: false})
+    fastify.sequelize.sync({force: true})
         .then(async () => {
             console.log("Database synchronized successfully")
         })

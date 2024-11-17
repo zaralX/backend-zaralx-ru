@@ -11,17 +11,17 @@ module.exports = async function (fastify, options) {
         },
         discordId: {
             type: DataTypes.BIGINT,
-            allowNull: false,
+            allowNull: true,
             unique: true
         },
         telegramId: {
             type: DataTypes.BIGINT,
-            allowNull: false,
+            allowNull: true,
             unique: true
         },
         email: {
             type: DataTypes.STRING,
-            allowNull: false
+            allowNull: true
         },
         password: {
             type: DataTypes.TEXT,
