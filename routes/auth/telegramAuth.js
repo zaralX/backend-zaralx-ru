@@ -6,10 +6,10 @@ const crypto = require('crypto');
 module.exports = async function (fastify, opts) {
     fastify.post('/telegram/login', async function (request, reply) {
         const User = fastify.sequelize.model('User');
-        try {
+        checkAccount: try {
             const accessToken = request.cookies.access_token
             if (!accessToken) {
-                return;
+                break checkAccount;
             }
 
             const userJwtData = fastify.jwt.verify(accessToken)

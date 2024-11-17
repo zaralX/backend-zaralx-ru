@@ -5,10 +5,10 @@ const DiscordOauth2 = require("discord-oauth2");
 module.exports = async function (fastify, opts) {
   fastify.post('/discord/login', async function (request, reply) {
     const User = fastify.sequelize.model('User');
-    try {
+    checkAccount: try {
       const accessToken = request.cookies.access_token
       if (!accessToken) {
-        return;
+        break checkAccount;
       }
 
       const userJwtData = fastify.jwt.verify(accessToken)
