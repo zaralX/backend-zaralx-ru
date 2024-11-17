@@ -98,7 +98,7 @@ module.exports = async function (fastify, opts) {
       });
     } catch (error) {
       fastify.log.error(error);
-      return reply.status(500).send({ message: 'Ошибка авторизации через Discord' });
+      return reply.status(500).send({ message: 'Ошибка авторизации через Discord', error });
     }
   });
 };
