@@ -14,6 +14,11 @@ module.exports = async function (fastify, options) {
             allowNull: false,
             unique: true
         },
+        telegramId: {
+            type: DataTypes.BIGINT,
+            allowNull: false,
+            unique: true
+        },
         email: {
             type: DataTypes.STRING,
             allowNull: false
