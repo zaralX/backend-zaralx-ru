@@ -5,6 +5,17 @@ const crypto = require('crypto');
 
 module.exports = async function (fastify, opts) {
     fastify.post('/telegram/login', async function (request, reply) {
+        const User = fastify.sequelize.model('User');
+        try {
+            const accessToken = request.cookies.access_token
+            if (!accessToken) {
+                return;
+            }
+
+            const userJwtData = fastify.jwt.verify(accessToken)
+            request.user = await User.findOne({where: {id: userJwtData.id}})
+        } catch (err) {}
+
         const { id, first_name, username, photo_url, auth_date, hash } = request.body;
 
         if (!id || !hash) {
@@ -16,7 +27,9 @@ module.exports = async function (fastify, opts) {
             .update(process.env.TELEGRAM_BOT_TOKEN)
             .digest();
 
-        const dataCheckString = Object.keys(request.body)
+        const checkdata = request.body;
+        delete checkdata.user;
+        const dataCheckString = Object.keys(checkdata)
             .filter(key => key !== 'hash')
             .sort()
             .map(key => `${key}=${request.body[key]}`)
@@ -30,28 +43,24 @@ module.exports = async function (fastify, opts) {
             return reply.status(403).send({ message: 'Invalid Telegram data' });
         }
 
-        const User = fastify.sequelize.model('User');
-
         // Проверяем, существует ли уже пользователь с этим Telegram ID
         let user = await User.findOne({ where: { telegramId: id } });
 
         if (!user) {
-            // Если пользователя нет, проверяем связь с Discord
-            const linkedUser = await User.findOne({
-                where: { telegramId: null, discordId: request?.body?.discordId ?? -1 }
+            // Ищем аккаунт для привязки
+            user = await User.findOne({
+                where: { discordId: request?.user?.discordId ?? -1 }
             });
 
-            if (linkedUser) {
-                // Привязываем Telegram к существующему аккаунту Discord
-                user = linkedUser;
+            if (user) {
+                // Привязываем Telegram к существующему аккаунту
                 user.telegramId = id;
                 await user.save();
             } else {
                 // Создаем нового пользователя
                 user = await User.create({
                     telegramId: id,
-                    username: username,
-                    photoUrl: photo_url,
+                    username: username
                 });
             }
         }

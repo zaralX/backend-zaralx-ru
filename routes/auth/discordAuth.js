@@ -38,12 +38,18 @@ module.exports = async function (fastify, opts) {
       let user = await User.findOne({ where: { discordId: discordUserData.id } });
 
       if (!user) {
-        // Проверяем, связан ли аккаунт Telegram с указанным email
-        user = await User.findOne({ where: { email: discordUserData.email, discordId: null } });
+        // Ищем аккаунт для привязки
+        user = await User.findOne({ where: { email: discordUserData.email } });
+        if (!user) {
+          user = await User.findOne({ where: { telegramId: request?.body?.user?.telegramId ?? -1 } });
+        }
 
         if (user) {
           // Привязываем Discord ID к существующему аккаунту Telegram
           user.discordId = discordUserData.id;
+          if (user.email === null && discordUserData.email !== null) {
+            user.email = discordUserData.email;
+          }
           await user.save();
         } else {
           // Создаем нового пользователя

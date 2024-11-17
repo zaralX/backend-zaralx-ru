@@ -9,6 +9,10 @@ module.exports = async function (fastify, options) {
             primaryKey: true,
             autoIncrement: true
         },
+        username: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
         discordId: {
             type: DataTypes.BIGINT,
             allowNull: true,
