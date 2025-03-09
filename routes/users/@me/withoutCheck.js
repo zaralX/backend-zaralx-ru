@@ -18,7 +18,7 @@ module.exports = async function (fastify, opts) {
 
             return reply.status(200).send();
         } catch (err) {
-            return reply.status(401).send({error: 'Invalid refresh token'})
+            return reply.status(403).send({error: 'Invalid refresh token'})
         }
     })
 
