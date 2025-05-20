@@ -6,7 +6,7 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 
 let cache = {
   timestamp: 0,
-  data: {},
+  data: {}
 };
 
 module.exports = fastifyPlugin(async function (fastify, opts) {
