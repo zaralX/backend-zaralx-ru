@@ -16,6 +16,7 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
   const GITLAB_TOKEN = process.env.GITLAB_TOKEN;
 
   async function fetchGitHubActivity() {
+    console.log("Fetching GitHub activity...");
     const { request, gql } = await import('graphql-request');
 
     const endpoint = 'https://api.github.com/graphql';
@@ -51,51 +52,85 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
       }
     }
 
+    console.log("GitHub activity fetched");
+
     return result;
   }
 
 
 
   async function fetchGitLabActivity() {
+    console.log("Fetching GitLab activity...");
     const now = dayjs();
     const oneYearAgo = now.subtract(1, 'year').format('YYYY-MM-DD');
     const baseUrl = 'https://gitlab.com/api/v4';
 
-    // 1. Получаем user_id по username
-    const userRes = await axios.get(`${baseUrl}/users?username=${GITLAB_USERNAME}`, {
-      headers: { 'Private-Token': GITLAB_TOKEN },
-    });
-
-    if (!userRes.data || userRes.data.length === 0) return {};
-
-    const userId = userRes.data[0].id;
-
-    const result = {};
-    let page = 1;
-    const perPage = 100;
-
-    while (true) {
-      const eventsUrl = `${baseUrl}/users/${userId}/events?after=${oneYearAgo}&per_page=${perPage}&page=${page}`;
-      const res = await axios.get(eventsUrl, {
+    try {
+      // Получаем user_id
+      const userRes = await axios.get(`${baseUrl}/users?username=${GITLAB_USERNAME}`, {
         headers: { 'Private-Token': GITLAB_TOKEN },
       });
 
-      const events = res.data;
+      if (!userRes.data || userRes.data.length === 0) return {};
 
-      for (const event of events) {
-        const date = dayjs(event.created_at).format('YYYY-MM-DD');
-        if (!result[date]) result[date] = 0;
-        result[date]++;
+      const userId = userRes.data[0].id;
+      const result = {};
+      let page = 1;
+      const perPage = 100;
+      const maxRetries = 3;
+
+      while (true) {
+        const eventsUrl = `${baseUrl}/users/${userId}/events?after=${oneYearAgo}&per_page=${perPage}&page=${page}`;
+
+        let attempt = 0;
+        let success = false;
+        let res;
+
+        while (attempt < maxRetries && !success) {
+          try {
+            res = await axios.get(eventsUrl, {
+              headers: { 'Private-Token': GITLAB_TOKEN },
+            });
+
+            if (res.status !== 200) {
+              throw new Error(`Unexpected status code: ${res.status}`);
+            }
+
+            success = true;
+          } catch (err) {
+            attempt++;
+            console.error(`Attempt ${attempt} failed for page ${page}:`, err.message);
+            if (attempt >= maxRetries) {
+              console.error("Max retries reached. Aborting GitLab activity fetch.");
+              return result; // Возвращаем то, что успели собрать
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // увеличивающаяся задержка
+          }
+        }
+
+        const events = res.data;
+
+        for (const event of events) {
+          const date = dayjs(event.created_at).format('YYYY-MM-DD');
+          if (!result[date]) result[date] = 0;
+          result[date]++;
+        }
+
+        const nextPage = res.headers['x-next-page'];
+        if (!nextPage) break;
+
+        page = parseInt(nextPage, 10);
       }
 
-      const nextPage = res.headers['x-next-page'];
-      if (!nextPage) break;
+      console.log("GitLab activity fetched");
+      return result;
 
-      page = parseInt(nextPage, 10);
+    } catch (err) {
+      console.error("Failed to fetch GitLab activity:", err.message);
+      return {}; // Возвращаем пустой результат при полной ошибке
     }
-
-    return result;
   }
+
 
 
   async function getCombinedActivity() {
