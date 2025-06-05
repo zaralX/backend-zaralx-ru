@@ -41,6 +41,7 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
       Authorization: `Bearer ${GITHUB_TOKEN}`,
     });
 
+
     const calendar = res.user.contributionsCollection.contributionCalendar;
     const result = {};
 
@@ -78,6 +79,7 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
       let page = 1;
       const perPage = 100;
       const maxRetries = 3;
+      const commits = []
 
       while (true) {
         const eventsUrl = `${baseUrl}/users/${userId}/events?after=${oneYearAgo}&per_page=${perPage}&page=${page}`;
@@ -111,6 +113,7 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
         const events = res.data;
 
         for (const event of events) {
+          if (event?.push_data?.commit_title) commits.push(event?.push_data?.commit_title);
           const date = dayjs(event.created_at).format('YYYY-MM-DD');
           if (!result[date]) result[date] = 0;
           result[date]++;
@@ -123,7 +126,7 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
       }
 
       console.log("GitLab activity fetched");
-      return result;
+      return {result, commits: shuffleAndLimit(commits)};
 
     } catch (err) {
       console.error("Failed to fetch GitLab activity:", err.message);
@@ -147,7 +150,7 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
       combined[date] += count;
     }
 
-    for (const [date, count] of Object.entries(gitlab)) {
+    for (const [date, count] of Object.entries(gitlab.result)) {
       if (!combined[date]) combined[date] = 0;
       combined[date] += count;
     }
@@ -168,7 +171,7 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
         Object.entries(combined).sort(([a], [b]) => new Date(a) - new Date(b))
     );
 
-    return sorted;
+    return {datesActivity: sorted, commits: gitlab.commits};
   }
 
   function getPreviousSunday() {
@@ -187,17 +190,27 @@ module.exports = fastifyPlugin(async function (fastify, opts) {
 
     // Сортировка и фильтрация
     const sorted = Object.fromEntries(
-        Object.entries(data)
+        Object.entries(data.datesActivity)
             .filter(([_, count]) => count > 0)
             .sort(([a], [b]) => new Date(a) - new Date(b))
     );
 
     cache = {
       timestamp: now,
-      data: sorted,
+      data: {activity: sorted, commits: data.commits},
     };
 
-    return sorted;
+    return cache.data;
   });
 
+  function shuffleAndLimit(arr) {
+    // Алгоритм Фишера-Йейтса для перемешивания
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+
+    // Ограничение до 100 элементов
+    return arr.slice(0, 100);
+  }
 });
